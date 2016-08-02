@@ -1,0 +1,318 @@
+﻿// SetParameterジェネレータ
+/*
+  * Version 2.0.0 2015/12/31
+  * 対応バージョン A5:SQL Mk-2 Version 2.11.3 beta 10以降
+
+  * 概要
+    アクティブなSQLエディタのSQL文中、もしくは選択した文字列中に存在するパラメータを検索し、
+    擬似命令のSetParameterを作成しエディタの先頭に出力します。
+
+  * 使用方法
+    SetParameterGenerator.dms
+    SetParameterGenerator.dfm
+    をA5:SQL Mk-2 フォルダの script > Tool フォルダの中にコピーし、
+    使用するときはメニューの「ツール(T)」から使用してください。
+
+    SQLパラメータ設定画面で予め値が設定されているパラメータに関しては、
+    その値とデータ型で出力し、設定されていないパラメータに関しては、
+    値、データ型をiniファイルで設定されたデフォルト値、デフォルトタイプで出力しますので、
+    出力された値を上書きして設定して下さい。
+
+    設定で「次回からこのダイアログを表示しない」にチェックをした後、再びダイアログを表示されたい場合は、
+    スクリプトと同じフォルダに生成されている SetParameterGenerator.ini の HideDialog=true の部分をHideDialog=falseに書き換えてください。
+    
+  * ライセンス
+    商用・非商用に関わらず、改変・再配布などご自由にお使いください。
+
+  * Webサイト http://alien8.sakura.ne.jp/
+
+  * A5M2公式以外で参考にさせて頂いたページ
+    * DMonkey解説 - VxEditor & DMonkey布教ページ  http://lukewarm.s41.xrea.com/DMonkey/
+    * GUIの見た目やプロパティの効果など確認環境
+      Lazarus (フリーのDelphi互換IDE）  http://www.lazarus-ide.org/
+
+    * VCLのプロパティやメソッド等のヘルプ
+      embarcadero http://docwiki.embarcadero.com/Libraries/Seattle/ja/Main_Page
+*/
+
+class MainForm extends VCLForm {
+	
+	var path = WScript.Path + 'scripts\Tool\';
+	
+	function MainForm(main, setting) {
+
+		this.loadFromFile(new File(this.path + 'SetParameterGenerator.dfm'));
+		this.main = main;
+
+		// イベント
+		this.chkDefaultNull.onClick = chkChange;
+
+		// 設定読み込み
+		fromSetting(setting);
+	}
+
+	// フォーム上の設定値をSettingから設定
+	function fromSetting(setting) {
+		this.left = setting.windowLeft;
+		this.top = setting.windowTop;
+		this.chkHideDialog.chekced = setting.hideDialog;
+		this.rdgExistSection.itemIndex = setting.existSection;
+		this.cmbDefaultType.itemIndex = this.cmbDefaultType.items.indexOf(setting.defaultType);
+		this.edtDefaultValue.text = setting.defaultValue;
+		this.chkDefaultNull.checked = setting.defaultNull;
+	}
+	
+	// フォーム上の設定値をSettingにコンバート	
+	function toSetting() {
+		var setting = new Setting();
+		setting.windowLeft = this.left;
+		setting.windowTop = this.top;
+		setting.hideDialog = this.chkHideDialog.checked;
+		setting.existSection = this.rdgExistSection.itemIndex;
+		setting.defaultType = this.cmbDefaultType.text;
+		setting.defaultValue = this.edtDefaultValue.text;
+		setting.defaultNull = this.chkDefaultNull.checked;
+		return setting;
+	}
+
+	function chkChange(sender) {
+		// NULLにチェック状態で、デフォルト値の使用可否を制御する
+		this.edtDefaultValue.enabled = !sender.checked;
+	}
+
+}
+
+class Setting {
+
+	var path = WScript.Path + 'scripts\Tool\';
+
+	var windowLeft;
+	var windowTop;
+	var hideDialog;
+	var existSection;
+	var defaultType;
+	var defaultValue;
+	var defaultNull;
+	
+	function loadSetting() {
+		// iniファイル読み込み
+		var ini = new Ini(new File(this.path + 'SetParameterGenerator.ini'));
+		this.windowLeft = ini.read('Window','Left',100);
+		this.windowTop = ini.read('Window','Top',100);
+		this.hideDialog = (ini.read('SetParameterGenerator','HideDialog', false) === 'true');
+		this.existSection = ini.read('SetParameterGenerator','ExistSection', 0);
+		this.defaultType = ini.read('SetParameterGenerator','DefaultType', 0);
+		this.defaultValue = ini.read('SetParameterGenerator','DefaultValue','*empty');
+		this.defaultNull = (ini.read('SetParameterGenerator','DefaultNull', false) === 'true');
+		return this;
+	}
+	
+	function saveSetting() {
+		var ini = new Ini(new File(this.path + 'SetParameterGenerator.ini'));
+		ini.write('Window','Left',this.windowLeft);
+		ini.write('Window','Top',this.windowTop);
+		ini.write('SetParameterGenerator','HideDialog', this.hideDialog);
+		ini.write('SetParameterGenerator','ExistSection', this.existSection);
+		ini.write('SetParameterGenerator','DefaultType', this.defaultType);
+		ini.write('SetParameterGenerator','DefaultValue',this.defaultValue);
+		ini.write('SetParameterGenerator','DefaultNull', this.defaultNull);
+		ini.update();	// iniファイル更新
+	}
+}
+
+class Generator() {
+	
+	function process() {
+		var setting = new Setting().loadSetting();
+		if (setting.hideDialog) {
+			// HideDialog設定がtrueならダイアログを出さずに出力する
+			generate(setting.existSection, setting.defaultType, setting.defaultValue, setting.defaultNull);
+		} else {
+			var frm = new MainForm(true,setting);
+			if (frm.showModal() === 1) {
+				// 出力ボタンが押されてfrmを閉じたなら、設定を保存し出力する
+				setting = frm.toSetting();
+				setting.saveSetting();
+				generate(setting.existSection, setting.defaultType, setting.defaultValue, setting.defaultNull);
+			}
+		}
+	}
+	
+	function generate(existSection, defaultType, defaultValue, defaultNull) {
+
+		var w = application.getActiveWindow();
+		var noParameterErrorMessage;
+		var startBlock = '-- ## SetParameterGenerator generated'; // セクション開始
+		var sqlWk;	// ワーク用
+		
+		// パラメータ検索対象の文字列を設定
+		if (w.selectedText) {
+			// 選択中の文字列があるならそれを検索対象とする
+			sqlWk = w.selectedText;
+			noParameterErrorMessage = "選択文字列中にパラメータが存在しません。";
+		} else {
+			sqlWk = w.sql;
+			noParameterErrorMessage = "SQL中にパラメータが存在しません。";
+		}
+		
+		// コメントをブランクに置き換える（検索対象から外す）
+		sqlWk = sqlWk.replace(new RegExp('(/\*.*?\*/)|(--.*?(\r\n|\n))','g'),'  ');
+
+		// クォーテーションで囲まれた部分をブランクに置き換える（検索対象から外す）
+		// 念のため正規表現ではなく愚直にやる
+		var st = -1;
+		var i = 0;
+		while((i = sqlWk.indexOf("'",i)) !== -1) {
+			// 囲みの始まり（かもしれない）クォーテーションを発見した
+			if (sqlWk.charAt(i+1) == "'") {
+				// 連続しているなら無視
+				i += 2;	//インデックスを2つ進める
+			} else {
+				if (st == -1) {
+					// 見つけたのが囲み開始のクォーテーションなら 
+					st = i;
+					i++;
+				} else {
+					// 見つけたのが囲み終了のクォーテーションなら囲まれている範囲をブランクに置き換える
+					sqlWk = sqlWk.substr(0,st-1) + "  " + sqlWk.substr(i + 1);
+					i = st + 2;
+					st = -1;
+				}
+			}
+		}
+		
+		// sql中からパラメータを探し列挙
+		// ここではVBScriptの正規表現を使用する(exec()のgオプション使用時の後方参照に不具合らしきものを見つけたので）
+		var regVbs = WScript.CreateObject("VBScript.RegExp");
+		regVbs.pattern = '[^\w\-][@|:]([\w\-]+)';
+		regVbs.global = true;
+		regVbs.multiline = true;
+
+		var pNames = [];	// SQL中に発見したパラメータ名の配列
+		var ma = regVbs.execute(sqlWk);
+		if (!isNull(ma)) {
+			for(var i=0 ; i<ma.count ; i++) {
+				if (!isUndefined(ma[i].submatches[0])) {
+					var pn = ma[i].submatches[0];
+					var existFlg = false;
+					for (var j=0 ; j<pNames.length ; j++) {
+						if (pNames[j] === pn) {
+							// 既にパラメータ名が存在する
+							existFlg = true;
+							break;
+						}
+					}
+					if (!existFlg) {
+						pNames.push(pn);
+					}
+				}
+			}
+		}
+		
+		// SQLパラメータ画面で値が設定されているパラメータ
+		var parameters = application.getParameters();
+		var str = new StringBuffer();
+		for(var i=0 ; i<pNames.length ; i++) {
+			var pName = pNames[i];
+			var pType = defaultType;
+			var pVal = defaultValue;
+			var pIsNull = defaultNull;
+			// SQLパラメータ画面で既に値が設定されていればその値とデータ型を使う
+			for (var p in parameters) {
+				var param = parameters[p];
+				if (pName == param.name) {
+					switch (param.type) {
+						case application.ftSmallint:	// 16bit 整数
+						case application.ftWord:		// 16bit 符号なし整数
+							pType = "Short";
+							break; 
+						case application.ftInteger:		// 32bit 整数
+							pType = "Integer";
+							break;
+						case application.ftCurrency:	// 金額型
+							pType = "Currency";
+							break;
+						case application.ftFloat:		// 浮動小数点数値型
+							pType = "Float";
+							break;
+						case application.ftDate:		// 日付型
+							pType = "Date";
+							break;
+						case application.ftTime:		// 時刻型	
+							pType = "Time";
+							break;
+						case application.ftDateTime:	// 日付／時刻型
+							pType = "DateTime";
+							break;
+						case application.ftBoolean:		// 論理型
+							pType = "Boolean";
+							break;
+						case application.ftBCD:			// 2進化10進数型
+							pType = "BCD";
+							break;
+						default:
+							pType = "String";			// 文字列型
+							break; 
+					}
+					pVal = param.value;
+					pIsNull = param.isNull;
+					break;
+				}
+			}
+			str.append(" SetParameter ").append(pName).append(" ");
+			if (pIsNull) {
+				str.append("NULL");
+			} else {
+				if (pType == "Time" && pVal.toString().length > 8) {
+					// 時刻型で8文字より長い文字列がきたら後ろ8文字だけ切り出す
+					pVal = pVal.toString().slice(-8);
+				}
+
+				if ( pType == "String" || pType == "Float" || pType == "DateTime" || pType == "Date" || pType == "Time" ) {
+					// シングルクォートが必要なものはシングルクォートで囲む
+					pVal = pVal.toString().replace(/'/g,"''"); // シングルクォートエスケープ
+					str.append("'").append(pVal).append("'");
+				} else {
+					str.append(pVal);
+				}
+			}
+			str.append(" ").append(pType).append("\n");
+		}
+		
+		if (str.length > 0) {
+			var now = new Date();
+			str.insert(0,startBlock + " "  + now + "\n/**\n");	// セクション開始行を挿入
+			str.append("*/\n");	// セクション終了
+			var sql = w.sql;
+			
+			if (existSection == 1) {
+				// 既に出力されているSetParameter Generator セクションがあれば削除する
+				var reg = new RegExp('(^' + startBlock + '.*?(\r\n|\n)/\*\*(\r\n|\n).*?\*/(\r\n|\n)*)','gm');
+				sql = sql.replace(reg,'');
+				str.append("\n");
+				str.append(sql);
+			} else {
+				// 既に出力されているSetParameter Generator セクションがあればコメントアウトにする
+				var reg = new RegExp('(^' + startBlock + '.*?(\r\n|\n))/\*\*','gm');
+				sql = sql.replace(reg,'$1/\*');	// 擬似命令開始 /** を /* に置き換え
+				str.append("\n");
+				str.append(sql);
+			}
+
+			w.sql = str.toString();
+			alert("出力しました。");
+		} else {
+			alert(noParameterErrorMessage);
+		}	
+	}
+}
+
+(function(){
+	var w = application.getActiveWindow();
+	if (w.formType == "A5SqlEditor" ) {
+		new Generator().process();
+	} else {
+		alert("SQLエディタのタブを選択して下さい。");
+	}
+})();
+
