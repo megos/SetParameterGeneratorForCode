@@ -1,4 +1,4 @@
-﻿// SetParameterジェネレータ
+﻿// SetParameterGeneratorForCode
 /*
   * Version 2.0.0 2015/12/31
   * 対応バージョン A5:SQL Mk-2 Version 2.11.3 beta 10以降
@@ -8,8 +8,8 @@
     擬似命令のSetParameterを作成しエディタの先頭に出力します。
 
   * 使用方法
-    SetParameterGenerator.dms
-    SetParameterGenerator.dfm
+    SetParameterGeneratorForCode.dms
+    SetParameterGeneratorForCode.dfm
     をA5:SQL Mk-2 フォルダの script > Tool フォルダの中にコピーし、
     使用するときはメニューの「ツール(T)」から使用してください。
 
@@ -19,7 +19,7 @@
     出力された値を上書きして設定して下さい。
 
     設定で「次回からこのダイアログを表示しない」にチェックをした後、再びダイアログを表示されたい場合は、
-    スクリプトと同じフォルダに生成されている SetParameterGenerator.ini の HideDialog=true の部分をHideDialog=falseに書き換えてください。
+    スクリプトと同じフォルダに生成されている SetParameterGeneratorForCode.ini の HideDialog=true の部分をHideDialog=falseに書き換えてください。
     
   * ライセンス
     商用・非商用に関わらず、改変・再配布などご自由にお使いください。
@@ -41,7 +41,7 @@ class MainForm extends VCLForm {
 	
 	function MainForm(main, setting) {
 
-		this.loadFromFile(new File(this.path + 'SetParameterGenerator.dfm'));
+		this.loadFromFile(new File(this.path + 'SetParameterGeneratorForCode.dfm'));
 		this.main = main;
 
 		// イベント
@@ -96,26 +96,26 @@ class Setting {
 	
 	function loadSetting() {
 		// iniファイル読み込み
-		var ini = new Ini(new File(this.path + 'SetParameterGenerator.ini'));
+		var ini = new Ini(new File(this.path + 'SetParameterGeneratorForCode.ini'));
 		this.windowLeft = ini.read('Window','Left',100);
 		this.windowTop = ini.read('Window','Top',100);
-		this.hideDialog = (ini.read('SetParameterGenerator','HideDialog', false) === 'true');
-		this.existSection = ini.read('SetParameterGenerator','ExistSection', 0);
-		this.defaultType = ini.read('SetParameterGenerator','DefaultType', 0);
-		this.defaultValue = ini.read('SetParameterGenerator','DefaultValue','*empty');
-		this.defaultNull = (ini.read('SetParameterGenerator','DefaultNull', false) === 'true');
+		this.hideDialog = (ini.read('SetParameterGeneratorForCode','HideDialog', false) === 'true');
+		this.existSection = ini.read('SetParameterGeneratorForCode','ExistSection', 0);
+		this.defaultType = ini.read('SetParameterGeneratorForCode','DefaultType', 0);
+		this.defaultValue = ini.read('SetParameterGeneratorForCode','DefaultValue','*empty');
+		this.defaultNull = (ini.read('SetParameterGeneratorForCode','DefaultNull', false) === 'true');
 		return this;
 	}
 	
 	function saveSetting() {
-		var ini = new Ini(new File(this.path + 'SetParameterGenerator.ini'));
+		var ini = new Ini(new File(this.path + 'SetParameterGeneratorForCode.ini'));
 		ini.write('Window','Left',this.windowLeft);
 		ini.write('Window','Top',this.windowTop);
-		ini.write('SetParameterGenerator','HideDialog', this.hideDialog);
-		ini.write('SetParameterGenerator','ExistSection', this.existSection);
-		ini.write('SetParameterGenerator','DefaultType', this.defaultType);
-		ini.write('SetParameterGenerator','DefaultValue',this.defaultValue);
-		ini.write('SetParameterGenerator','DefaultNull', this.defaultNull);
+		ini.write('SetParameterGeneratorForCode','HideDialog', this.hideDialog);
+		ini.write('SetParameterGeneratorForCode','ExistSection', this.existSection);
+		ini.write('SetParameterGeneratorForCode','DefaultType', this.defaultType);
+		ini.write('SetParameterGeneratorForCode','DefaultValue',this.defaultValue);
+		ini.write('SetParameterGeneratorForCode','DefaultNull', this.defaultNull);
 		ini.update();	// iniファイル更新
 	}
 }
@@ -142,7 +142,7 @@ class Generator() {
 
 		var w = application.getActiveWindow();
 		var noParameterErrorMessage;
-		var startBlock = '-- ## SetParameterGenerator generated'; // セクション開始
+		var startBlock = '-- ## SetParameterGeneratorForCode generated'; // セクション開始
 		var sqlWk;	// ワーク用
 		
 		// パラメータ検索対象の文字列を設定
