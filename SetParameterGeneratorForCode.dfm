@@ -1,40 +1,9 @@
 object Form1: TForm1
   Left = 1247
   Top = 496
-  Caption = 'SetParameterGenerator'
+  Caption = 'SetParameterGeneratorForCode'
   ClientHeight = 182
   ClientWidth = 284
-  object rdgExistSection: TRadioGroup
-    Left = 8
-    Height = 60
-    Hint = '既に存在するSetParameterGeneratorセクションの扱いを設定します'
-    Top = 8
-    Width = 152
-    Caption = '既存のセクション'
-    ItemIndex = 0
-    Items.Strings = (
-      'コメントアウトする'
-      '上書きする'
-    )
-    TabOrder = 1
-  end
-  object lblDefaultValue: TLabel
-    Left = 16
-    Height = 12
-    Top = 110
-    Width = 64
-    Caption = 'デフォルト値'
-    ParentColor = False
-  end
-  object edtDefaultValue: TEdit
-    Left = 102
-    Height = 26
-    Hint = '出力するデフォルト値を設定します'
-    Top = 104
-    Width = 100
-    TabOrder = 3
-    Text = '*empty'
-  end
   object lblDefaultType: TLabel
     Left = 16
     Height = 12
@@ -66,15 +35,6 @@ object Form1: TForm1
     Style = csDropDownList
     TabOrder = 2
     Text = 'String'
-  end
-  object chkDefaultNull: TCheckBox
-    Left = 216
-    Height = 22
-    Hint = '出力するデフォルト値をNULLにします。'
-    Top = 104
-    Width = 54
-    Caption = 'NULL'
-    TabOrder = 4
   end
   object btnGenerate: TButton
     Left = 184

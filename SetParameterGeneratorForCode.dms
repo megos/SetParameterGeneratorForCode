@@ -44,9 +44,6 @@ class MainForm extends VCLForm {
 		this.loadFromFile(new File(this.path + 'SetParameterGeneratorForCode.dfm'));
 		this.main = main;
 
-		// イベント
-		this.chkDefaultNull.onClick = chkChange;
-
 		// 設定読み込み
 		fromSetting(setting);
 	}
@@ -56,10 +53,7 @@ class MainForm extends VCLForm {
 		this.left = setting.windowLeft;
 		this.top = setting.windowTop;
 		this.chkHideDialog.chekced = setting.hideDialog;
-		this.rdgExistSection.itemIndex = setting.existSection;
 		this.cmbDefaultType.itemIndex = this.cmbDefaultType.items.indexOf(setting.defaultType);
-		this.edtDefaultValue.text = setting.defaultValue;
-		this.chkDefaultNull.checked = setting.defaultNull;
 	}
 	
 	// フォーム上の設定値をSettingにコンバート	
@@ -68,10 +62,7 @@ class MainForm extends VCLForm {
 		setting.windowLeft = this.left;
 		setting.windowTop = this.top;
 		setting.hideDialog = this.chkHideDialog.checked;
-		setting.existSection = this.rdgExistSection.itemIndex;
 		setting.defaultType = this.cmbDefaultType.text;
-		setting.defaultValue = this.edtDefaultValue.text;
-		setting.defaultNull = this.chkDefaultNull.checked;
 		return setting;
 	}
 
@@ -91,8 +82,6 @@ class Setting {
 	var hideDialog;
 	var existSection;
 	var defaultType;
-	var defaultValue;
-	var defaultNull;
 	
 	function loadSetting() {
 		// iniファイル読み込み
@@ -102,8 +91,6 @@ class Setting {
 		this.hideDialog = (ini.read('SetParameterGeneratorForCode','HideDialog', false) === 'true');
 		this.existSection = ini.read('SetParameterGeneratorForCode','ExistSection', 0);
 		this.defaultType = ini.read('SetParameterGeneratorForCode','DefaultType', 0);
-		this.defaultValue = ini.read('SetParameterGeneratorForCode','DefaultValue','*empty');
-		this.defaultNull = (ini.read('SetParameterGeneratorForCode','DefaultNull', false) === 'true');
 		return this;
 	}
 	
@@ -114,8 +101,6 @@ class Setting {
 		ini.write('SetParameterGeneratorForCode','HideDialog', this.hideDialog);
 		ini.write('SetParameterGeneratorForCode','ExistSection', this.existSection);
 		ini.write('SetParameterGeneratorForCode','DefaultType', this.defaultType);
-		ini.write('SetParameterGeneratorForCode','DefaultValue',this.defaultValue);
-		ini.write('SetParameterGeneratorForCode','DefaultNull', this.defaultNull);
 		ini.update();	// iniファイル更新
 	}
 }
@@ -133,12 +118,12 @@ class Generator() {
 				// 出力ボタンが押されてfrmを閉じたなら、設定を保存し出力する
 				setting = frm.toSetting();
 				setting.saveSetting();
-				generate(setting.existSection, setting.defaultType, setting.defaultValue, setting.defaultNull);
+				generate(setting.defaultType);
 			}
 		}
 	}
 	
-	function generate(existSection, defaultType, defaultValue, defaultNull) {
+	function generate(defaultType) {
 
 		var w = application.getActiveWindow();
 		var noParameterErrorMessage;
@@ -215,92 +200,16 @@ class Generator() {
 		for(var i=0 ; i<pNames.length ; i++) {
 			var pName = pNames[i];
 			var pType = defaultType;
-			var pVal = defaultValue;
-			var pIsNull = defaultNull;
-			// SQLパラメータ画面で既に値が設定されていればその値とデータ型を使う
-			for (var p in parameters) {
-				var param = parameters[p];
-				if (pName == param.name) {
-					switch (param.type) {
-						case application.ftSmallint:	// 16bit 整数
-						case application.ftWord:		// 16bit 符号なし整数
-							pType = "Short";
-							break; 
-						case application.ftInteger:		// 32bit 整数
-							pType = "Integer";
-							break;
-						case application.ftCurrency:	// 金額型
-							pType = "Currency";
-							break;
-						case application.ftFloat:		// 浮動小数点数値型
-							pType = "Float";
-							break;
-						case application.ftDate:		// 日付型
-							pType = "Date";
-							break;
-						case application.ftTime:		// 時刻型	
-							pType = "Time";
-							break;
-						case application.ftDateTime:	// 日付／時刻型
-							pType = "DateTime";
-							break;
-						case application.ftBoolean:		// 論理型
-							pType = "Boolean";
-							break;
-						case application.ftBCD:			// 2進化10進数型
-							pType = "BCD";
-							break;
-						default:
-							pType = "String";			// 文字列型
-							break; 
-					}
-					pVal = param.value;
-					pIsNull = param.isNull;
-					break;
-				}
-			}
-			str.append(" SetParameter ").append(pName).append(" ");
-			if (pIsNull) {
-				str.append("NULL");
-			} else {
-				if (pType == "Time" && pVal.toString().length > 8) {
-					// 時刻型で8文字より長い文字列がきたら後ろ8文字だけ切り出す
-					pVal = pVal.toString().slice(-8);
-				}
-
-				if ( pType == "String" || pType == "Float" || pType == "DateTime" || pType == "Date" || pType == "Time" ) {
-					// シングルクォートが必要なものはシングルクォートで囲む
-					pVal = pVal.toString().replace(/'/g,"''"); // シングルクォートエスケープ
-					str.append("'").append(pVal).append("'");
-				} else {
-					str.append(pVal);
-				}
-			}
-			str.append(" ").append(pType).append("\n");
+			
+			
+			str.append('cmd.Parameters.Add(New SqlParameter("@').append(pName).append('", SqlDbType.');
+			str.append(pType).append(').Value = entity.').append(pName).append(')').append("\n");
 		}
 		
 		if (str.length > 0) {
 			var now = new Date();
-			str.insert(0,startBlock + " "  + now + "\n/**\n");	// セクション開始行を挿入
-			str.append("*/\n");	// セクション終了
-			var sql = w.sql;
-			
-			if (existSection == 1) {
-				// 既に出力されているSetParameter Generator セクションがあれば削除する
-				var reg = new RegExp('(^' + startBlock + '.*?(\r\n|\n)/\*\*(\r\n|\n).*?\*/(\r\n|\n)*)','gm');
-				sql = sql.replace(reg,'');
-				str.append("\n");
-				str.append(sql);
-			} else {
-				// 既に出力されているSetParameter Generator セクションがあればコメントアウトにする
-				var reg = new RegExp('(^' + startBlock + '.*?(\r\n|\n))/\*\*','gm');
-				sql = sql.replace(reg,'$1/\*');	// 擬似命令開始 /** を /* に置き換え
-				str.append("\n");
-				str.append(sql);
-			}
-
-			w.sql = str.toString();
-			alert("出力しました。");
+			Clipboard.asText = str.toString();
+			alert("クリップボードにソースコードを貼り付けました。");
 		} else {
 			alert(noParameterErrorMessage);
 		}	
