@@ -44,7 +44,7 @@ object Form1: TForm1
     ItemHeight = 12
     ItemIndex = 0
     Items.Strings = (
-      'String'
+      'NVarChar'
       'Short'
       'Integer'
       'Currency'

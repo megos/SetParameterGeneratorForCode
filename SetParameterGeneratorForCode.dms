@@ -52,6 +52,7 @@ class MainForm extends VCLForm {
 	function fromSetting(setting) {
 		this.left = setting.windowLeft;
 		this.top = setting.windowTop;
+		this.txtSource.text = setting.source;
 		this.chkHideDialog.chekced = setting.hideDialog;
 		this.cmbDefaultType.itemIndex = this.cmbDefaultType.items.indexOf(setting.defaultType);
 	}
@@ -63,6 +64,7 @@ class MainForm extends VCLForm {
 		setting.windowTop = this.top;
 		setting.hideDialog = this.chkHideDialog.checked;
 		setting.defaultType = this.cmbDefaultType.text;
+		setting.source = this.txtSource.text;
 		return setting;
 	}
 
@@ -91,6 +93,7 @@ class Setting {
 		this.hideDialog = (ini.read('SetParameterGeneratorForCode','HideDialog', false) === 'true');
 		this.existSection = ini.read('SetParameterGeneratorForCode','ExistSection', 0);
 		this.defaultType = ini.read('SetParameterGeneratorForCode','DefaultType', 0);
+		this.source = ini.read('SetParameterGeneratorForCode','Source', '');
 		return this;
 	}
 	
@@ -101,6 +104,7 @@ class Setting {
 		ini.write('SetParameterGeneratorForCode','HideDialog', this.hideDialog);
 		ini.write('SetParameterGeneratorForCode','ExistSection', this.existSection);
 		ini.write('SetParameterGeneratorForCode','DefaultType', this.defaultType);
+		ini.write('SetParameterGeneratorForCode','Source', this.source);
 		ini.update();	// iniファイル更新
 	}
 }
@@ -118,12 +122,12 @@ class Generator() {
 				// 出力ボタンが押されてfrmを閉じたなら、設定を保存し出力する
 				setting = frm.toSetting();
 				setting.saveSetting();
-				generate(setting.defaultType);
+				generate(setting.source, setting.defaultType);
 			}
 		}
 	}
 	
-	function generate(defaultType) {
+	function generate(source, defaultType) {
 
 		var w = application.getActiveWindow();
 		var noParameterErrorMessage;
@@ -201,9 +205,7 @@ class Generator() {
 			var pName = pNames[i];
 			var pType = defaultType;
 			
-			
-			str.append('cmd.Parameters.Add(New SqlParameter("@').append(pName).append('", SqlDbType.');
-			str.append(pType).append(').Value = entity.').append(pName).append(')').append("\n");
+			str.append(source.replace(/\$Name/g, pName).replace(/\$Type/g, pType)).append("\n");
 		}
 		
 		if (str.length > 0) {
