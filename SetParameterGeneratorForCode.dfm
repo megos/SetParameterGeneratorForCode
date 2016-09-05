@@ -24,40 +24,22 @@ object Form1: TForm1
     Height = 25
     Top = 40
     Width = 50
-    Caption = '※ ソースコード内に$Name: パラメータ名, $Type: データ型を埋め込むことで置換ができます'
+    Caption = '※ ソースコード内に$Name: カラム名, $Type: データ型を埋め込むことで置換ができます'
     ParentColor = False
   end
-  object lblDefaultType: TLabel
+  object lblTable: TLabel
     Left = 16
     Height = 20
     Top = 70
     Width = 400
-    Caption = 'デフォルト型'
+    Caption = '対象テーブル'
     ParentColor = False
   end
-  object cmbDefaultType: TComboBox
+  object txtTables: TEdit
     Left = 80
     Height = 26
-    Hint = '出力するデフォルト型を設定します'
     Top = 67
-    Width = 100
-    ItemHeight = 12
-    ItemIndex = 0
-    Items.Strings = (
-      'NVarChar'
-      'Short'
-      'Integer'
-      'Currency'
-      'Float'
-      'Date'
-      'Time'
-      'DateTime'
-      'Boolean'
-      'BCD'
-    )
-    Style = csDropDownList
-    TabOrder = 2
-    Text = 'String'
+    Width = 200
   end
   object btnGenerate: TButton
     Left = 400
@@ -68,14 +50,12 @@ object Form1: TForm1
     ModalResult = 1
     TabOrder = 0
   end
-  object chkHideDialog: TCheckBox
+  object lblTableHint:TLabel
     Left = 16
     Height = 22
-    Hint = 'チェックすると次回からこのダイアログを表示せず設定値で即実行します。'#13#10'SetParameterGenerator.ini ファイルを開き、'#13#10'HideDialog=false に書き換えることで再びダイアログを表示可能です。'
     Top = 100
-    Width = 226
-    Caption = '次回からこのダイアログを表示しない'
-    ShowHint = True
-    TabOrder = 5
+    Width = 400
+    Caption = '※「,」で複数テーブルを指定可能です'
+    ParentColor = False
   end
 end
