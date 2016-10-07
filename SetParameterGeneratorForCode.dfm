@@ -24,7 +24,7 @@ object Form1: TForm1
     Height = 25
     Top = 40
     Width = 50
-    Caption = '※ ソースコード内に$Name: カラム名, $Type: データ型を埋め込むことで置換ができます'
+    Caption = '※ ソースコード内に$Name: カラム名, $Type: データ型, $Comment: コメントを埋め込むことで置換ができます'
     ParentColor = False
   end
   object lblTable: TLabel
