@@ -198,6 +198,7 @@ class Generator() {
 		var conn = application.dbTree.getSelectedDatabaseConnection();
 
 		var pTypes = [];
+		var pComments = [];
 
 		var tableArr = tables.split(',');
 		var rs = null;
@@ -213,6 +214,7 @@ class Generator() {
 				for (var j = 0; j < pNames.length; j++) {
 					if (rs[i].columnName == pNames[j]) {
 						pTypes[j] = rs[i].dataType.replace(/\([0-9]+\)/, '').replace(/ .*/, '');
+						pComments[j] = rs[i].comment;
 					}
 				}
 			}
@@ -222,13 +224,13 @@ class Generator() {
 		var str = new StringBuffer();
 		for(var i=0 ; i<pNames.length ; i++) {
 			var pName = pNames[i];
-			var pType = pTypes[i];
+			var pType = pTypes[i] != null ? pTypes[i] : '';
+			var pComment = pComments[i] != null ? pComments[i] : '';
 			
-			str.append(source.replace(/\$Name/g, pName).replace(/\$Type/g, pType)).append("\n");
+			str.append(source.replace(/\$Name/g, pName).replace(/\$Type/g, pType).replace(/\$Comment/g, pComment)).append("\n");
 		}
 		
 		if (str.length > 0) {
-			var now = new Date();
 			Clipboard.asText = str.toString();
 			alert("クリップボードにソースコードを貼り付けました。");
 		} else {
