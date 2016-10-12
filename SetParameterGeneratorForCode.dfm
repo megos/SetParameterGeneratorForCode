@@ -41,6 +41,20 @@ object Form1: TForm1
     Top = 67
     Width = 200
   end
+  object lblComment: TLabel
+    Left = 306
+    Height = 20
+    Top = 70
+    Width = 400
+    Caption = 'ƒRƒƒ“ƒg•¶š—ñ'
+    ParentColor = False
+  end
+  object txtComment: TEdit
+    Left = 380
+    Height = 26
+    Top = 67
+    Width = 20
+  end
   object btnGenerate: TButton
     Left = 400
     Height = 25

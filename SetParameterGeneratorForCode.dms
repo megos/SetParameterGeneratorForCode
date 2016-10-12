@@ -54,6 +54,7 @@ class MainForm extends VCLForm {
 		this.top = setting.windowTop;
 		this.txtSource.text = setting.source;
 		this.txtTables.text = setting.tables;
+		this.txtComment.text = setting.comment;
 	}
 	
 	// フォーム上の設定値をSettingにコンバート	
@@ -63,6 +64,7 @@ class MainForm extends VCLForm {
 		setting.windowTop = this.top;
 		setting.tables = this.txtTables.text;
 		setting.source = this.txtSource.text;
+		setting.comment = this.txtComment.text;
 		return setting;
 	}
 
@@ -90,7 +92,8 @@ class Setting {
 		this.windowTop = ini.read('Window','Top',100);
 		this.existSection = ini.read('SetParameterGeneratorForCode','ExistSection', 0);
 		this.tables = ini.read('SetParameterGeneratorForCode','tables', '');
-		this.source = ini.read('SetParameterGeneratorForCode','Source', 'command.Parameters.Add("@$Name", SqlDbType.$Type).Value = $Name');
+		this.source = ini.read('SetParameterGeneratorForCode','Source', 'cmd.Parameters.Add(Me.CreateParameter("@$Name", SqlDbType.$Type, entity.$Name)) ' + "'" + '$Comment');
+		this.comment = ini.read('SetParameterGeneratorForCode', 'Comment', "'");
 		return this;
 	}
 	
@@ -101,6 +104,7 @@ class Setting {
 		ini.write('SetParameterGeneratorForCode','ExistSection', this.existSection);
 		ini.write('SetParameterGeneratorForCode','tables', this.tables);
 		ini.write('SetParameterGeneratorForCode','Source', this.source);
+		ini.write('SetParameterGeneratorForCode','Comment', this.comment);
 		ini.update();	// iniファイル更新
 	}
 }
@@ -118,12 +122,12 @@ class Generator() {
 				// 出力ボタンが押されてfrmを閉じたなら、設定を保存し出力する
 				setting = frm.toSetting();
 				setting.saveSetting();
-				generate(setting.source, setting.tables);
+				generate(setting.source, setting.tables, setting.comment);
 			}
 		}
 	}
 	
-	function generate(source, tables) {
+	function generate(source, tables, comment) {
 
 		var w = application.getActiveWindow();
 		var noParameterErrorMessage;
@@ -213,7 +217,7 @@ class Generator() {
 			for (var i = 0; i < rs.length; i++) {
 				for (var j = 0; j < pNames.length; j++) {
 					if (rs[i].columnName == pNames[j]) {
-						pTypes[j] = rs[i].dataType.replace(/\([0-9]+\)/, '').replace(/ .*/, '');
+						pTypes[j] = rs[i].dataType.replace(/\(.*/, '').replace(/ .*/, '');
 						pComments[j] = rs[i].comment;
 					}
 				}
@@ -221,17 +225,37 @@ class Generator() {
 		}
 
 
-		var str = new StringBuffer();
+		var sources = [];
+		var beginCommentIndexes = [];
 		for(var i=0 ; i<pNames.length ; i++) {
 			var pName = pNames[i];
 			var pType = pTypes[i] != null ? pTypes[i] : '';
 			var pComment = pComments[i] != null ? pComments[i] : '';
 			
-			str.append(source.replace(/\$Name/g, pName).replace(/\$Type/g, pType).replace(/\$Comment/g, pComment)).append("\n");
+			sources[i] = source.replace(/\$Name/g, pName).replace(/\$Type/g, pType).replace(/\$Comment/g, pComment);
+		}
+
+		// ソースコードを整形
+		var len         = sources.length;
+		var maxIndex    = -1;
+		var searchStr   = comment;
+		var searchRegex = new RegExp(searchStr);
+
+		for (var i = 0; i < len; i++) {
+			beginCommentIndexes[i] = sources[i].search(searchStr);
+			if (maxIndex < beginCommentIndexes[i]) {
+				maxIndex = beginCommentIndexes[i];
+			}
+		}
+		for (var i = 0; i < len; i++) {
+			var spaceLength = maxIndex - beginCommentIndexes[i] + 1;
+			if (spaceLength > 0) {
+				sources[i] = sources[i].replace(searchRegex, new Array(spaceLength).join(' ') + searchStr);
+			}
 		}
 		
-		if (str.length > 0) {
-			Clipboard.asText = str.toString();
+		if (sources.length > 0) {
+			Clipboard.asText = sources.join("\n");
 			alert("クリップボードにソースコードを貼り付けました。");
 		} else {
 			alert(noParameterErrorMessage);
@@ -247,4 +271,3 @@ class Generator() {
 		alert("SQLエディタのタブを選択して下さい。");
 	}
 })();
-
