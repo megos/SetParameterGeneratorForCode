@@ -1,39 +1,5 @@
 ﻿// SetParameterGeneratorForCode
-/*
-  * Version 2.0.0 2015/12/31
-  * 対応バージョン A5:SQL Mk-2 Version 2.11.3 beta 10以降
 
-  * 概要
-    アクティブなSQLエディタのSQL文中、もしくは選択した文字列中に存在するパラメータを検索し、
-    擬似命令のSetParameterを作成しエディタの先頭に出力します。
-
-  * 使用方法
-    SetParameterGeneratorForCode.dms
-    SetParameterGeneratorForCode.dfm
-    をA5:SQL Mk-2 フォルダの script > Tool フォルダの中にコピーし、
-    使用するときはメニューの「ツール(T)」から使用してください。
-
-    SQLパラメータ設定画面で予め値が設定されているパラメータに関しては、
-    その値とデータ型で出力し、設定されていないパラメータに関しては、
-    値、データ型をiniファイルで設定されたデフォルト値、デフォルトタイプで出力しますので、
-    出力された値を上書きして設定して下さい。
-
-    設定で「次回からこのダイアログを表示しない」にチェックをした後、再びダイアログを表示されたい場合は、
-    スクリプトと同じフォルダに生成されている SetParameterGeneratorForCode.ini の HideDialog=true の部分をHideDialog=falseに書き換えてください。
-    
-  * ライセンス
-    商用・非商用に関わらず、改変・再配布などご自由にお使いください。
-
-  * Webサイト http://alien8.sakura.ne.jp/
-
-  * A5M2公式以外で参考にさせて頂いたページ
-    * DMonkey解説 - VxEditor & DMonkey布教ページ  http://lukewarm.s41.xrea.com/DMonkey/
-    * GUIの見た目やプロパティの効果など確認環境
-      Lazarus (フリーのDelphi互換IDE）  http://www.lazarus-ide.org/
-
-    * VCLのプロパティやメソッド等のヘルプ
-      embarcadero http://docwiki.embarcadero.com/Libraries/Seattle/ja/Main_Page
-*/
 
 class MainForm extends VCLForm {
 	
