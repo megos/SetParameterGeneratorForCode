@@ -202,21 +202,23 @@ class Generator() {
 		}
 
 		// ソースコードを整形
-		var len         = sources.length;
-		var maxIndex    = -1;
-		var searchStr   = comment;
-		var searchRegex = new RegExp(searchStr);
+		if (comment.length > 0) {
+			var len         = sources.length;
+			var maxIndex    = -1;
+			var searchStr   = comment;
+			var searchRegex = new RegExp(searchStr);
 
-		for (var i = 0; i < len; i++) {
-			beginCommentIndexes[i] = sources[i].search(searchStr);
-			if (maxIndex < beginCommentIndexes[i]) {
-				maxIndex = beginCommentIndexes[i];
+			for (var i = 0; i < len; i++) {
+				beginCommentIndexes[i] = sources[i].search(searchStr);
+				if (maxIndex < beginCommentIndexes[i]) {
+					maxIndex = beginCommentIndexes[i];
+				}
 			}
-		}
-		for (var i = 0; i < len; i++) {
-			var spaceLength = maxIndex - beginCommentIndexes[i] + 1;
-			if (spaceLength > 0) {
-				sources[i] = sources[i].replace(searchRegex, new Array(spaceLength).join(' ') + searchStr);
+			for (var i = 0; i < len; i++) {
+				var spaceLength = maxIndex - beginCommentIndexes[i] + 1;
+				if (spaceLength > 0) {
+					sources[i] = sources[i].replace(searchRegex, new Array(spaceLength).join(' ') + searchStr);
+				}
 			}
 		}
 		
